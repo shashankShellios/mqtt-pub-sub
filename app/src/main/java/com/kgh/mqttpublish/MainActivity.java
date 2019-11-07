@@ -2,8 +2,10 @@ package com.kgh.mqttpublish;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,10 +21,14 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MQTT";
     MqttAndroidClient client;
 
-    static String MQTT_HOST = "ws://broker.mqttdashboard.com:8000";
-    static String USERNAME = "shellios";
-    static String PASSWORD = "gvc";
-    String TOPIC_STRING = "testtopic/mqt";
+    EditText edTopic, edMessage;
+    TextView statusConnect;
+
+    static String MQTT_HOST = "tcp://52.66.234.178:1884";
+    static String USERNAME = "llmuvmdemo";
+    static String PASSWORD = "GB@demo#19";
+//    String TOPIC_STRING = "testtopic/mqt";
+    String TOPIC_STRING = "GVM/WS/042";
     String MESSAGE = "HelloFromAndroid";
 
     @Override
@@ -30,10 +36,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final TextView statusConnect = findViewById(R.id.textView);
+        statusConnect = findViewById(R.id.textView);
+        edTopic = findViewById(R.id.editText);
+        edMessage = findViewById(R.id.editText2);
+
+        connect();
+
+    }
+
+    public void connect(){
+
         String clientId = MqttClient.generateClientId();
         client = new MqttAndroidClient(this.getApplicationContext(), MQTT_HOST,
-                        clientId);
+                clientId);
         /*client = new MqttAndroidClient(this.getApplicationContext(), "tcp://broker.hivemq.com:1883",
                         clientId);
         */
@@ -60,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Failed to Connect !", Toast.LENGTH_SHORT).show();
                     // Something went wrong e.g. connection timeout or firewall problems
                     Log.d(TAG, "onFailure");
-                    statusConnect.setText("Disconnected");
+                    statusConnect.setText("Failed To Connect !");
 
                 }
             });
@@ -84,23 +99,27 @@ public class MainActivity extends AppCompatActivity {
         } catch (MqttException e) {
             e.printStackTrace();
         }
-
     }
 
-    public void connect(View v){
+    public void pub(View v) {
 
-    }
+        String topic = "GVM/WS/" + edTopic.getText().toString();
+        String payload = edMessage.getText().toString();
 
-    public void pub(View v){
+        connect();
+        if (statusConnect.getText().toString() == "Connected") {
 
-        Toast.makeText(this, "Published", Toast.LENGTH_SHORT).show();
-
-        String topic = TOPIC_STRING;
-        String payload = MESSAGE;
-        try {
-            client.publish(topic, payload.getBytes(),0,false);
-        } catch (MqttException e) {
-            e.printStackTrace();
+            if (!TextUtils.isEmpty(topic) && !TextUtils.isEmpty(payload)) {
+                try {
+                    client.publish(topic, payload.getBytes(), 0, false);
+                    Toast.makeText(this, "Published", Toast.LENGTH_SHORT).show();
+                } catch (MqttException e) {
+                    Toast.makeText(this, "Something went wrong !", Toast.LENGTH_SHORT).show();
+                    e.printStackTrace();
+                }
+            } else
+                Toast.makeText(this, "Please fill out all the fields !", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, topic, Toast.LENGTH_LONG).show();
         }
     }
 }
