@@ -21,18 +21,16 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 public class MainActivity extends AppCompatActivity {
 
-    String TAG = "MQTT";
+    String TAG = "MQTT"; //for Logcat.
     MqttAndroidClient client;
 
-    EditText edTopic;
-    TextView statusConnect, startWeight, changeWeight, endWeight;
+    EditText edTopic; // Machine Number input field.
+    TextView statusConnect, startWeight, changeWeight, endWeight, statusDoor;
 
     static String MQTT_HOST = "tcp://52.66.234.178:1884";
     static String USERNAME = "llmuvmdemo";
     static String PASSWORD = "GB@demo#19";
-//    String TOPIC_STRING = "testtopic/mqt";
-    String TOPIC_STRING = "GVM/WS/042";
-    String MESSAGE = "HelloFromAndroid";
+    String MESSAGE = "001"; // Payload Message
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,20 +41,18 @@ public class MainActivity extends AppCompatActivity {
         startWeight = findViewById(R.id.valueStart);
         changeWeight = findViewById(R.id.valueChanged);
         endWeight = findViewById(R.id.valueEnd);
+        statusDoor = findViewById(R.id.msgDoor);
 
         edTopic = findViewById(R.id.editText);
 
         connect();
     }
-
-    public void connect(){
+        // Connect on starting application.
+    public void connect() {
 
         String clientId = MqttClient.generateClientId();
         client = new MqttAndroidClient(this.getApplicationContext(), MQTT_HOST,
                 clientId);
-        /*client = new MqttAndroidClient(this.getApplicationContext(), "tcp://broker.hivemq.com:1883",
-                        clientId);
-        */
 
         MqttConnectOptions options = new MqttConnectOptions();
         options.setAutomaticReconnect(true);
@@ -70,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onSuccess(IMqttToken asyncActionToken) {
                     Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_SHORT).show();
                     // We are connected
-                    Log.d(TAG, "onSuccess");
+                    //Log.d(TAG, "onSuccess");
                     statusConnect.setText("Connected");
                     setSubscription();
                 }
@@ -88,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (MqttException e) {
             e.printStackTrace();
         }
-
+            // Subscription message will be received here.
         client.setCallback(new MqttCallback() {
             @Override
             public void connectionLost(Throwable cause) {
@@ -102,15 +98,17 @@ public class MainActivity extends AppCompatActivity {
                     msg = msg.replace("*SW,","").replace("#","");
 //                    msg.replace("*SW,","");
                     startWeight.setText(msg);
-                }
-                if (msg.contains("*CW")){
+                }else if (msg.contains("*CW")){
                     msg = msg.replace("*CW,","").replace("#","");
                     changeWeight.setText(msg);
-                }
-                if (msg.contains("*EW")){
+                }else if (msg.contains("*EW")){
                     msg = msg.replace("*EW,","").replace("#","");
                     endWeight.setText(msg);
+                } else {
+                    msg = msg.replace("*","").replace("#","");
+                    statusDoor.setText(msg);
                 }
+
             }
 
             @Override
@@ -119,19 +117,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
+        // Message publishing that carry command.
     public void pub(View v) {
 
         String topic = "GVM/WS/" + edTopic.getText().toString();
-        String payload = edMessage.getText().toString();
+        String payload = MESSAGE;
 
-        connect();
+//        connect();
+
         if (statusConnect.getText().toString() == "Connected") {
-
-            if (!TextUtils.isEmpty(topic) && !TextUtils.isEmpty(payload)) {
+            if (!TextUtils.isEmpty(topic)) {
                 try {
                     client.publish(topic, payload.getBytes(), 0, false);
-                    Toast.makeText(this, "Published", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Publishing", Toast.LENGTH_SHORT).show();
+                    setSubscription();
+                            // If Listener needed for for pub message delivery.
+                    /*try {
+                        client.publish(topic, payload.getBytes(), 0, false, null, new IMqttActionListener() {
+                            @Override
+                            public void onSuccess(IMqttToken asyncActionToken) {
+                                Toast.makeText(this, "Publishing", Toast.LENGTH_SHORT).show();
+                            }
+
+                            @Override
+                            public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+
+                            }
+                        });*/
+
                 } catch (MqttException e) {
                     Toast.makeText(this, "Something went wrong !", Toast.LENGTH_SHORT).show();
                     e.printStackTrace();
@@ -144,10 +157,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void setSubscription(){
 
-        String topic = "GVM/WS/" + edTopic.getText().toString() + "GVC";
+        String topic = "GVM/WS/" + edTopic.getText().toString();
 
         try{
-            client.subscribe("GVM/WS/042", 0);
+            client.subscribe(topic, 0);
             Log.i("MQTT", "Subscription");
         } catch (Exception e) {
             e.printStackTrace();
